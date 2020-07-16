@@ -68,19 +68,13 @@ pub fn apply_settings_update(
         UpdateState::Nothing => (),
     }
 
-    match settings.accept_new_fields {
-        UpdateState::Update(v) => {
-            schema.set_accept_new_fields(v);
-        },
-        UpdateState::Clear => {
-            schema.set_accept_new_fields(true);
-        },
-        UpdateState::Nothing => (),
-    }
-
     match settings.searchable_attributes.clone() {
         UpdateState::Update(v) => {
-            schema.update_indexed(v)?;
+            if v.len() == 1 && v[0] == "*" || v.is_empty() {
+                schema.set_all_fields_as_indexed();
+            } else {
+                schema.update_indexed(v)?;
+            }
             must_reindex = true;
         },
         UpdateState::Clear => {
@@ -90,8 +84,16 @@ pub fn apply_settings_update(
         UpdateState::Nothing => (),
     }
     match settings.displayed_attributes.clone() {
-        UpdateState::Update(v) => schema.update_displayed(v)?,
+        UpdateState::Update(v) => {
+            // safe to unwrap because len is 1
+            if v.len() == 1 && v.iter().next().unwrap() == "*" || v.is_empty() {
+                schema.set_all_fields_as_displayed();
+            } else {
+                schema.update_displayed(v)?
+            }
+        },
         UpdateState::Clear => {
+            println!("\n\n\n\nHERRE\n\n\n");
             schema.set_all_fields_as_displayed();
         },
         UpdateState::Nothing => (),
